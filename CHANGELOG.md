@@ -17,11 +17,16 @@
 - 邮箱连接器读取含裸非 ASCII 字节邮件头（如未 MIME 编码的中文发件人/主题）时崩溃 `Object of type Header is not JSON serializable`：`search_emails`/`read_email` 改用 `email.policy.default` 解析并统一 `str()` 转换，同时自动解码 MIME 编码头为可读文本；正文中声明未知字符集（如 `unknown-8bit`）时回退 UTF-8 而非抛 `LookupError`。影响所有基于该通用 IMAP/SMTP 适配器的邮箱（QQ/网易/Gmail 等）。
 ### 新增
 - 专家可配置默认对话模式（Ask / Plan / Craft）：新建 / 编辑专家及从专家创建时可选，新建对话与无模式粘性的线程（含 IM / CLI / cron 渠道）按该默认解析，缺省为 Craft；已有对话保持各自粘性的模式不变（Fixes #1310）。
+- 聊天输入栏将对话模式、模型、连接器、知识库、技能、专家、子智能体收进「+」菜单，从菜单右侧弹出选择面板；聊天页用户头像与侧栏账号头像一致。
 
 ### 修复
 - httpx 0.28 将 ``NO_PROXY`` 中的 CIDR（如 ``192.168.0.0/16``）当成精确 IP，内网地址误走代理；同时兼容 Windows 分号分隔、IPv6 CIDR，以及 macOS/Windows 系统代理下的 loopback 直连（Fixes #1347）。
 - Windows 上「存储根目录」选择器不再被限制在 home 所在盘：浏览树改为枚举全部就绪盘符（新增 `GET /api/filesystem/roots`，`/api/filesystem/defaults` 下发 `browse_roots`）
 - 存储根目录提示按平台区分：非 Linux 无 bubblewrap 时不再宣称「沙箱」，改为说明仅限制 AI 工具的文件访问
+- FnOS Docker 版重启后丢失配置、再次走安装向导：compose 曾硬编码非持久路径 `/var/apps/octop/share/octop/data`；改为挂载飞牛注入的 `TRIM_DATA_SHARE_PATHS`（`/volX/@appshare/octop/data`），并把 `.env` 副本落到 `@appdata`，升级时把旧目录数据迁过去。
+- FnOS Docker 版首次启动死循环：`octop-login.txt` 写在 data-share 根上却整目录挂到 `/data/.octop`，`octop init` 报 already exists and is not empty；entrypoint 还把该失败误判成弱密码并反复重试。现改为只挂 `share/.octop`，且 `octop init` 允许目录里只有旁路文件、没有 `octop.db`。
+- FnOS Docker 版 `env_file` 指向 `/volX/@appcenter/octop/docker/.env` 但文件不在该目录，compose 直接失败。去掉 `env_file`，把 `.env` 同步到应用中心 compose 工作目录，卷路径仍写成绝对路径。
+- FnOS Docker 版安装向导密码进不了容器：飞牛不加载 compose 旁的 `.env` 插值，官方镜像会另生成随机密码，导致设置窗口里的密码登录失败。现把向导密码写进 compose `environment`，并在容器已初始化时用 `octop user passwd` 同步。
 
 ## [1.0.2b5] - 2026-09-29
 
